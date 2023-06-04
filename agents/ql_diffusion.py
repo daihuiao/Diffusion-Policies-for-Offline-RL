@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from utils.logger import logger
+from tqdm import trange
 
 from agents.diffusion import Diffusion
 from agents.model import MLP
@@ -107,7 +108,7 @@ class Diffusion_QL(object):
     def train(self, replay_buffer, iterations, batch_size=100, log_writer=None):
 
         metric = {'bc_loss': [], 'ql_loss': [], 'actor_loss': [], 'critic_loss': []}
-        for _ in range(iterations):
+        for _ in trange(iterations):
             # Sample replay buffer / batch
             state, action, next_state, reward, not_done = replay_buffer.sample(batch_size)
 
@@ -145,6 +146,7 @@ class Diffusion_QL(object):
                 q_loss = - q1_new_action.mean() / q2_new_action.abs().mean().detach()
             else:
                 q_loss = - q2_new_action.mean() / q1_new_action.abs().mean().detach()
+            # actor_loss = bc_loss
             actor_loss = bc_loss + self.eta * q_loss
 
             self.actor_optimizer.zero_grad()

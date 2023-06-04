@@ -35,6 +35,7 @@ class Diffusion(nn.Module):
             betas = vp_beta_schedule(n_timesteps)
 
         alphas = 1. - betas
+        #Returns the cumulative product of elements of input in the dimension dim.
         alphas_cumprod = torch.cumprod(alphas, axis=0)
         alphas_cumprod_prev = torch.cat([torch.ones(1), alphas_cumprod[:-1]])
 
@@ -93,6 +94,7 @@ class Diffusion(nn.Module):
         return posterior_mean, posterior_variance, posterior_log_variance_clipped
 
     def p_mean_variance(self, x, t, s):
+        #这里计算的是x_0
         x_recon = self.predict_start_from_noise(x, t=t, noise=self.model(x, t, s))
 
         if self.clip_denoised:

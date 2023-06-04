@@ -15,6 +15,8 @@ from utils.logger import logger, setup_logger
 from torch.utils.tensorboard import SummaryWriter
 
 hyperparameters = {
+    'walker2d-random-v2': {'lr': 3e-4, 'eta': 1.0, 'max_q_backup': False, 'reward_tune': 'no', 'eval_freq': 50,
+                           'num_epochs': 2000, 'gn': 1.0, 'top_k': 1},
     'halfcheetah-medium-v2':         {'lr': 3e-4, 'eta': 1.0,   'max_q_backup': False,  'reward_tune': 'no',          'eval_freq': 50, 'num_epochs': 2000, 'gn': 9.0,  'top_k': 1},
     'hopper-medium-v2':              {'lr': 3e-4, 'eta': 1.0,   'max_q_backup': False,  'reward_tune': 'no',          'eval_freq': 50, 'num_epochs': 2000, 'gn': 9.0,  'top_k': 2},
     'walker2d-medium-v2':            {'lr': 3e-4, 'eta': 1.0,   'max_q_backup': False,  'reward_tune': 'no',          'eval_freq': 50, 'num_epochs': 2000, 'gn': 1.0,  'top_k': 1},
@@ -45,20 +47,21 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
 
     if args.algo == 'ql':
         from agents.ql_diffusion import Diffusion_QL as Agent
-        agent = Agent(state_dim=state_dim,
-                      action_dim=action_dim,
-                      max_action=max_action,
-                      device=device,
-                      discount=args.discount,
-                      tau=args.tau,
-                      max_q_backup=args.max_q_backup,
-                      beta_schedule=args.beta_schedule,
-                      n_timesteps=args.T,
-                      eta=args.eta,
-                      lr=args.lr,
-                      lr_decay=args.lr_decay,
-                      lr_maxt=args.num_epochs,
-                      grad_norm=args.gn)
+        for i in range(args.num_agents):
+            agent = Agent(state_dim=state_dim,
+                          action_dim=action_dim,
+                          max_action=max_action,
+                          device=device,
+                          discount=args.discount,
+                          tau=args.tau,
+                          max_q_backup=args.max_q_backup,
+                          beta_schedule=args.beta_schedule,
+                          n_timesteps=args.T,
+                          eta=args.eta,
+                          lr=args.lr,
+                          lr_decay=args.lr_decay,
+                          lr_maxt=args.num_epochs,
+                          grad_norm=args.gn)
     elif args.algo == 'bc':
         from agents.bc_diffusion import Diffusion_BC as Agent
         agent = Agent(state_dim=state_dim,
@@ -73,7 +76,7 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
 
     early_stop = False
     stop_check = utils.EarlyStopping(tolerance=1, min_delta=0.)
-    writer = None  # SummaryWriter(output_dir)
+    writer = SummaryWriter(output_dir)
 
     evaluations = []
     training_iters = 0
@@ -176,9 +179,10 @@ def eval_policy(policy, env_name, seed, eval_episodes=10):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     ### Experimental Setups ###
-    parser.add_argument("--exp", default='exp_1', type=str)                    # Experiment ID
-    parser.add_argument('--device', default=0, type=int)                       # device, {"cpu", "cuda", "cuda:0", "cuda:1"}, etc
+    parser.add_argument("--exp", default='exp_3', type=str)                    # Experiment ID
+    parser.add_argument('--device', default=1, type=int)                       # device, {"cpu", "cuda", "cuda:0", "cuda:1"}, etc
     parser.add_argument("--env_name", default="walker2d-medium-expert-v2", type=str)  # OpenAI gym environment name
+    # parser.add_argument("--env_name", default="walker2d-random-v2", type=str)  # OpenAI gym environment name
     parser.add_argument("--dir", default="results", type=str)                    # Logging directory
     parser.add_argument("--seed", default=0, type=int)                         # Sets Gym, PyTorch and Numpy seeds
     parser.add_argument("--num_steps_per_epoch", default=1000, type=int)
@@ -199,6 +203,7 @@ if __name__ == "__main__":
     ### Algo Choice ###
     parser.add_argument("--algo", default="ql", type=str)  # ['bc', 'ql']
     parser.add_argument("--ms", default='offline', type=str, help="['online', 'offline']")
+    parser.add_argument("--num_agents", default=10, type=int)
     # parser.add_argument("--top_k", default=1, type=int)
 
     # parser.add_argument("--lr", default=3e-4, type=float)

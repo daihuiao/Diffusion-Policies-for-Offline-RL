@@ -6,6 +6,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim import lr_scheduler
+
 from utils.logger import logger
 
 from agents.diffusion import Diffusion
@@ -30,6 +32,8 @@ class Diffusion_BC(object):
                                beta_schedule=beta_schedule, n_timesteps=n_timesteps,
                                ).to(device)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
+        self.actor_optimizer = torch.optim.SGD(self.actor.parameters(), lr=lr)
+        self.actor_scheduler = lr_scheduler.StepLR(self.actor_optimizer, step_size=30, gamma=0.1)
 
         self.max_action = max_action
         self.action_dim = action_dim
