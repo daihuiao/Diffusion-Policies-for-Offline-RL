@@ -170,6 +170,7 @@ for i in trange(1000):
         global_parameters_actor[key] = parameter / 3.0
     actor0.model.load_state_dict(global_parameters_actor)
     actor1.model.load_state_dict(global_parameters_actor)
+    actor2.model.load_state_dict(global_parameters_actor)
     if (i + 1) % 100 == 0:
         # plot(actor0, i, index=-1)
         #

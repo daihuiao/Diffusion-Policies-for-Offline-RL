@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import argparse
+import copy
+
 import gym
 import numpy as np
 import os
@@ -13,7 +15,11 @@ from utils import utils
 from utils.data_sampler import Data_Sampler
 from utils.logger import logger, setup_logger
 from torch.utils.tensorboard import SummaryWriter
+import os
+import wandb
 
+# 将此处的your_api_key替换为您的实际API密钥
+os.environ["WANDB_API_KEY"] = "b4fdd4e5e894cba0eda9610de6f9f04b87a86453"
 hyperparameters = {
     'walker2d-random-v2': {'lr': 3e-4, 'eta': 1.0, 'max_q_backup': False, 'reward_tune': 'no', 'eval_freq': 50,
                            'num_epochs': 2000, 'gn': 1.0, 'top_k': 1},
@@ -153,42 +159,120 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
     max_timesteps = args.num_epochs * args.num_steps_per_epoch
     metric = 100.
     utils.print_banner(f"Training Start", separator="*", num_star=90)
-    global_parameters_actor = {}
-    for key, parameter in agents[0].model.state_dict().items():
-        global_parameters_actor[key] = parameter.clone()
-    actor1.model.load_state_dict(global_parameters_actor)
+
+    # #  将所有模型的参数进行统一
+    global_parameters_actor_model = {}
+    for key, parameter in agents[0].actor.model.state_dict().items():
+        global_parameters_actor_model[key] = parameter.clone()
+    for i in range(args.num_agents-1):
+        agents[i+1].actor.model.load_state_dict(global_parameters_actor_model)
+
+    global_parameters_critic_q1model = {}
+    for key, parameter in agents[0].critic.q1_model.state_dict().items():
+        global_parameters_critic_q1model[key] = parameter.clone()
+    for i in range(args.num_agents-1):
+        agents[i+1].critic.q1_model.load_state_dict(global_parameters_critic_q1model)
+    global_parameters_critic_q2model = {}
+    for key, parameter in agents[0].critic.q2_model.state_dict().items():
+        global_parameters_critic_q2model[key] = parameter.clone()
+    for i in range(args.num_agents-1):
+        agents[i+1].critic.q2_model.load_state_dict(global_parameters_critic_q2model)
+
+    global_parameters_critic_q1model_target = {}
+    for key, parameter in agents[0].critic_target.q1_model.state_dict().items():
+        global_parameters_critic_q1model_target[key] = parameter.clone()
+    for i in range(args.num_agents-1):
+        agents[i+1].critic_target.q1_model.load_state_dict(global_parameters_critic_q1model_target)
+    global_parameters_critic_q2model_target = {}
+    for key, parameter in agents[0].critic_target.q2_model.state_dict().items():
+        global_parameters_critic_q2model_target[key] = parameter.clone()
+    for i in range(args.num_agents-1):
+        agents[i+1].critic_target.q2_model.load_state_dict(global_parameters_critic_q2model_target)
+
+    global_parameters_emamodel_model = {}
+    for key, parameter in agents[0].ema_model.model.state_dict().items():
+        global_parameters_emamodel_model[key] = parameter.clone()
+    for i in range(args.num_agents-1):
+        agents[i+1].ema_model.model.load_state_dict(global_parameters_emamodel_model)
 
     while (training_iters < max_timesteps) and (not early_stop):
         iterations = int(args.eval_freq * args.num_steps_per_epoch)
-        loss_metric = agent.train(data_sampler,
-                                  iterations=iterations,
-                                  batch_size=args.batch_size,
-                                  log_writer=writer)
+        loss_metrics = {}
+        for i in range(args.num_agents):
+            loss_metric = agents[i].train(data_samplers[i],
+                                          iterations=iterations,
+                                          batch_size=args.batch_size,
+                                          log_writer=writer,id=i)
+            loss_metrics[i] = loss_metric
+        # 更新当前轮次模型的参数
+        # agents[node_id].actor.model
+        # agents[node_id].critic.q1_model
+        # agents[node_id].critic.q2_model
+        # agents[node_id].critic_target.q1_model
+        # agents[node_id].critic_target.q2_model
+        # agents[node_id].ema_model.model
+        network_second_name= ["actor","critic","critic","critic_target","critic_target","ema_model"]
+        network_third_name= ["model","q1_model","q2_model","q1_model","q2_model","model"]
+        #计算所有参数的总和
+        sum_parameters = []
+        for node_id in range(len(agents)):  # FL 的不同节点
+            if len(sum_parameters)==0:
+                for i in range(len(network_second_name)):
+                    network=getattr(getattr(agents[node_id], network_second_name[i]), network_third_name[i]).state_dict()
+                    sum_parameters.append(copy.deepcopy(network))
+            else:
+                for i in range(len(network_second_name)):# 获取一个节点的不同网络
+                    network =getattr(getattr(agents[node_id],network_second_name[i]),network_third_name[i]).state_dict()
+                    for key in network.keys():  # 一个网络的不同层
+                        sum_parameters[i][key] += network[key]
+        #计算平均值
+        for i in range(len(network_second_name)):  # 获取一个节点的不同网络
+            for key in sum_parameters[i].keys():  # 一个网络的不同层
+                sum_parameters[i][key] = sum_parameters[i][key] / args.num_agents
+        #更新所有节点的参数
+        for node_id in range(len(agents)):  # FL 的不同节点
+            for i in range(len(network_second_name)):
+                getattr(getattr(agents[node_id], network_second_name[i]), network_third_name[i]).load_state_dict(sum_parameters[i])
+
         training_iters += iterations
         curr_epoch = int(training_iters // int(args.num_steps_per_epoch))
 
         # Logging
         utils.print_banner(f"Train step: {training_iters}", separator="*", num_star=90)
         logger.record_tabular('Trained Epochs', curr_epoch)
-        logger.record_tabular('BC Loss', np.mean(loss_metric['bc_loss']))
-        logger.record_tabular('QL Loss', np.mean(loss_metric['ql_loss']))
-        logger.record_tabular('Actor Loss', np.mean(loss_metric['actor_loss']))
-        logger.record_tabular('Critic Loss', np.mean(loss_metric['critic_loss']))
+        logger.record_tabular('BC Loss', np.mean(loss_metrics[0]['bc_loss']))
+        logger.record_tabular('QL Loss', np.mean(loss_metrics[0]['ql_loss']))
+        logger.record_tabular('Actor Loss', np.mean(loss_metrics[0]['actor_loss']))
+        logger.record_tabular('Critic Loss', np.mean(loss_metrics[0]['critic_loss']))
+        writer.add_scalar("outerloss/BC Loss", np.mean(loss_metrics[0]['bc_loss']), training_iters)
+        writer.add_scalar("outerloss/QL Loss", np.mean(loss_metrics[0]['ql_loss']), training_iters)
+        writer.add_scalar("outerloss/Actor Loss", np.mean(loss_metrics[0]['actor_loss']), training_iters)
+        writer.add_scalar("outerloss/Critic Loss", np.mean(loss_metrics[0]['critic_loss']), training_iters)
+        wandb.log({"outerloss/BC Loss": np.mean(loss_metrics[0]['bc_loss']),
+                   "outerloss/QL Loss": np.mean(loss_metrics[0]['ql_loss']),
+                   "outerloss/Actor Loss": np.mean(loss_metrics[0]['actor_loss']),
+                   "outerloss/Critic Loss": np.mean(loss_metrics[0]['critic_loss']),
+                   "outerloss/Training_iters": training_iters})
         logger.dump_tabular()
 
         # Evaluation
         eval_res, eval_res_std, eval_norm_res, eval_norm_res_std = eval_policy(agent, args.env_name, args.seed,
                                                                                eval_episodes=args.eval_episodes)
         evaluations.append([eval_res, eval_res_std, eval_norm_res, eval_norm_res_std,
-                            np.mean(loss_metric['bc_loss']), np.mean(loss_metric['ql_loss']),
-                            np.mean(loss_metric['actor_loss']), np.mean(loss_metric['critic_loss']),
+                            np.mean(loss_metrics[0]['bc_loss']), np.mean(loss_metrics[0]['ql_loss']),
+                            np.mean(loss_metrics[0]['actor_loss']), np.mean(loss_metrics[0]['critic_loss']),
                             curr_epoch])
         np.save(os.path.join(output_dir, "eval"), evaluations)
         logger.record_tabular('Average Episodic Reward', eval_res)
         logger.record_tabular('Average Episodic N-Reward', eval_norm_res)
+        writer.add_scalar("outereval/Average Episodic Reward", eval_res, curr_epoch)
+        writer.add_scalar("outereval/Average Episodic N-Reward", eval_norm_res, curr_epoch)
+        wandb.log({"outereval/Average Episodic Reward": eval_res,
+                   "outereval/Average Episodic N-Reward": eval_norm_res,
+                   "outereval/Training_iters": training_iters})
         logger.dump_tabular()
 
-        bc_loss = np.mean(loss_metric['bc_loss'])
+        bc_loss = np.mean(loss_metrics[0]['bc_loss'])
         if args.early_stop:
             early_stop = stop_check(metric, bc_loss)
 
@@ -254,13 +338,14 @@ def eval_policy(policy, env_name, seed, eval_episodes=10):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     ### Experimental Setups ###
-    parser.add_argument("--exp", default='exp_3', type=str)  # Experiment ID
+    parser.add_argument("--exp", default='exp_4', type=str)  # Experiment ID
     parser.add_argument('--device', default=1, type=int)  # device, {"cpu", "cuda", "cuda:0", "cuda:1"}, etc
     parser.add_argument("--env_name", default="walker2d-medium-expert-v2", type=str)  # OpenAI gym environment name
     # parser.add_argument("--env_name", default="walker2d-random-v2", type=str)  # OpenAI gym environment name
     parser.add_argument("--dir", default="results", type=str)  # Logging directory
     parser.add_argument("--seed", default=0, type=int)  # Sets Gym, PyTorch and Numpy seeds
-    parser.add_argument("--num_steps_per_epoch", default=1000, type=int)
+    # parser.add_argument("--num_steps_per_epoch", default=1000, type=int)
+    parser.add_argument("--num_steps_per_epoch", default=200, type=int)
 
     ### Optimization Setups ###
     parser.add_argument("--batch_size", default=256, type=int)
@@ -278,7 +363,7 @@ if __name__ == "__main__":
     ### Algo Choice ###
     parser.add_argument("--algo", default="ql", type=str)  # ['bc', 'ql']
     parser.add_argument("--ms", default='offline', type=str, help="['online', 'offline']")
-    parser.add_argument("--num_agents", default=10, type=int)
+    parser.add_argument("--num_agents", default=5, type=int)
     # parser.add_argument("--top_k", default=1, type=int)
 
     # parser.add_argument("--lr", default=3e-4, type=float)
@@ -303,7 +388,7 @@ if __name__ == "__main__":
     args.top_k = hyperparameters[args.env_name]['top_k']
 
     # Setup Logging
-    file_name = f"{args.env_name}|{args.exp}|diffusion-{args.algo}|T-{args.T}"
+    file_name = f"{args.env_name}|{args.exp}|diffusion-{args.algo}|T-{args.T}|agent-{args.num_agents}|"
     if args.lr_decay: file_name += '|lr_decay'
     file_name += f'|ms-{args.ms}'
 
@@ -333,6 +418,7 @@ if __name__ == "__main__":
     variant.update(action_dim=action_dim)
     variant.update(max_action=max_action)
     setup_logger(os.path.basename(results_dir), variant=variant, log_dir=results_dir)
+    wandb.init(project="FL_diffusion", entity="aohuidai", mode="online", name=file_name, config=variant)
     utils.print_banner(f"Env: {args.env_name}, state_dim: {state_dim}, action_dim: {action_dim}")
 
     train_agent(env,

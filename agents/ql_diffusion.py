@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import wandb
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from utils.logger import logger
 from tqdm import trange
@@ -71,7 +72,7 @@ class Diffusion_QL(object):
         self.model = MLP(state_dim=state_dim, action_dim=action_dim, device=device)
 
         self.actor = Diffusion(state_dim=state_dim, action_dim=action_dim, model=self.model, max_action=max_action,
-                               beta_schedule=beta_schedule, n_timesteps=n_timesteps,).to(device)
+                               beta_schedule=beta_schedule, n_timesteps=n_timesteps, ).to(device)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
 
         self.lr_decay = lr_decay
@@ -79,7 +80,7 @@ class Diffusion_QL(object):
 
         self.step = 0
         self.step_start_ema = step_start_ema
-        self.ema = EMA(ema_decay)
+        self.ema = EMA(ema_decay)  # todo 这里可以将其挪到外面
         self.ema_model = copy.deepcopy(self.actor)
         self.update_ema_every = update_ema_every
 
@@ -105,7 +106,7 @@ class Diffusion_QL(object):
             return
         self.ema.update_model_average(self.ema_model, self.actor)
 
-    def train(self, replay_buffer, iterations, batch_size=100, log_writer=None):
+    def train(self, replay_buffer, iterations, batch_size=100, log_writer=None, id=0):
 
         metric = {'bc_loss': [], 'ql_loss': [], 'actor_loss': [], 'critic_loss': []}
         for _ in trange(iterations):
@@ -134,7 +135,8 @@ class Diffusion_QL(object):
             self.critic_optimizer.zero_grad()
             critic_loss.backward()
             if self.grad_norm > 0:
-                critic_grad_norms = nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=self.grad_norm, norm_type=2)
+                critic_grad_norms = nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=self.grad_norm,
+                                                             norm_type=2)
             self.critic_optimizer.step()
 
             """ Policy Training """
@@ -151,10 +153,10 @@ class Diffusion_QL(object):
 
             self.actor_optimizer.zero_grad()
             actor_loss.backward()
-            if self.grad_norm > 0: 
-                actor_grad_norms = nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=self.grad_norm, norm_type=2)
+            if self.grad_norm > 0:
+                actor_grad_norms = nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=self.grad_norm,
+                                                            norm_type=2)
             self.actor_optimizer.step()
-
 
             """ Step Target network """
             if self.step % self.update_ema_every == 0:
@@ -166,7 +168,7 @@ class Diffusion_QL(object):
             self.step += 1
 
             """ Log """
-            if log_writer is not None:
+            if log_writer is not None and id == 0:
                 if self.grad_norm > 0:
                     log_writer.add_scalar('Actor Grad Norm', actor_grad_norms.max().item(), self.step)
                     log_writer.add_scalar('Critic Grad Norm', critic_grad_norms.max().item(), self.step)
@@ -174,13 +176,17 @@ class Diffusion_QL(object):
                 log_writer.add_scalar('QL Loss', q_loss.item(), self.step)
                 log_writer.add_scalar('Critic Loss', critic_loss.item(), self.step)
                 log_writer.add_scalar('Target_Q Mean', target_q.mean().item(), self.step)
+                wandb.log({"innerloss/BC Loss": bc_loss.item(),
+                           "innerloss/QL Loss": q_loss.item(),
+                           "innerloss/Critic Loss": critic_loss.item(),
+                           "innerloss/Target_Q Mean": target_q.mean().item()}, step=self.step)
 
             metric['actor_loss'].append(actor_loss.item())
             metric['bc_loss'].append(bc_loss.item())
             metric['ql_loss'].append(q_loss.item())
             metric['critic_loss'].append(critic_loss.item())
 
-        if self.lr_decay: 
+        if self.lr_decay:
             self.actor_lr_scheduler.step()
             self.critic_lr_scheduler.step()
 
@@ -210,5 +216,3 @@ class Diffusion_QL(object):
         else:
             self.actor.load_state_dict(torch.load(f'{dir}/actor.pth'))
             self.critic.load_state_dict(torch.load(f'{dir}/critic.pth'))
-
-
