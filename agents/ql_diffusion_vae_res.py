@@ -143,7 +143,7 @@ class Diffusion_QL_vae_res(object):
         # self.actor = Diffusion(state_dim=state_dim, action_dim=action_dim, model=self.model, max_action=max_action,
         #                        beta_schedule=beta_schedule, n_timesteps=n_timesteps, ).to(device)
         self.vae =  VAE(state_dim=state_dim, action_dim=action_dim, latent_dim=action_dim*2, max_action=max_action, device=device).to(device)
-        self.vae_optimizer = torch.optim.Adam(self.vae.arameters(), lr=lr)
+        self.vae_optimizer = torch.optim.Adam(self.vae.parameters(), lr=lr)
         self.actor = Actor(state_dim=state_dim, action_dim=action_dim, max_action=max_action).to(device)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
 
@@ -197,7 +197,7 @@ class Diffusion_QL_vae_res(object):
                 target_q = torch.min(target_q1, target_q2)
             else:
                 new_action = self.vae.decode(next_state)
-                next_action = self.ema_model.decode(next_state,new_action)
+                next_action = self.ema_model(next_state,new_action)
 
                 target_q1, target_q2 = self.critic_target(next_state, next_action)
                 target_q = torch.min(target_q1, target_q2)
@@ -283,7 +283,8 @@ class Diffusion_QL_vae_res(object):
         state = torch.FloatTensor(state.reshape(1, -1)).to(self.device)
         state_rpt = torch.repeat_interleave(state, repeats=50, dim=0)
         with torch.no_grad():
-            action = self.actor.decode(state_rpt)
+            new_action = self.vae.decode(state_rpt)
+            action = self.actor(state_rpt,new_action)
             q_value = self.critic_target.q_min(state_rpt, action).flatten()
             idx = torch.multinomial(F.softmax(q_value), 1)
         return action[idx].cpu().data.numpy().flatten()
