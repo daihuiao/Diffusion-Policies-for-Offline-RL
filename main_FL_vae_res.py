@@ -120,7 +120,7 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
     utils.print_banner('Loaded buffer')
 
     if args.algo == 'ql':
-        from agents.ql_diffusion_res import Diffusion_QL_res as Agent
+        from agents.ql_diffusion_vae_res import Diffusion_QL_vae_res as Agent
         agents = []
         for i in range(args.num_agents):
             agent = Agent(state_dim=state_dim,
@@ -167,12 +167,6 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
     for i in range(args.num_agents-1):
         agents[i+1].actor.model.load_state_dict(global_parameters_actor_model)
 
-    global_parameters_diffusion_model = {}
-    for key, parameter in agents[0].diffusion.model.state_dict().items():
-        global_parameters_diffusion_model[key] = parameter.clone()
-    for i in range(args.num_agents-1):
-        agents[i+1].diffusion.model.load_state_dict(global_parameters_diffusion_model)
-
     global_parameters_critic_q1model = {}
     for key, parameter in agents[0].critic.q1_model.state_dict().items():
         global_parameters_critic_q1model[key] = parameter.clone()
@@ -217,8 +211,8 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
         # agents[node_id].critic_target.q1_model
         # agents[node_id].critic_target.q2_model
         # agents[node_id].ema_model.model
-        network_second_name= ["diffusion","critic","critic","critic_target","critic_target","ema_model","actor"]
-        network_third_name= ["model","q1_model","q2_model","q1_model","q2_model","model","model"]
+        network_second_name= ["actor","critic","critic","critic_target","critic_target","ema_model"]
+        network_third_name= ["model","q1_model","q2_model","q1_model","q2_model","model"]
         #计算所有参数的总和
         sum_parameters = []
         for node_id in range(len(agents)):  # FL 的不同节点
@@ -340,7 +334,7 @@ def eval_policy(policy, env_name, seed, eval_episodes=10):
     utils.print_banner(f"Evaluation over {eval_episodes} episodes: {avg_reward:.2f} {avg_norm_score:.2f}")
     return avg_reward, std_reward, avg_norm_score, std_norm_score
 
-# python main_FL_res.py --num_agents 3 --device 0
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     ### Experimental Setups ###
@@ -394,7 +388,7 @@ if __name__ == "__main__":
     args.top_k = hyperparameters[args.env_name]['top_k']
 
     # Setup Logging
-    file_name = f"FL_res_fixed|agent-{args.num_agents}|{args.env_name}|{args.exp}|diffusion-{args.algo}|T-{args.T}|"
+    file_name = f"FL_vae_res|agent-{args.num_agents}|{args.env_name}|{args.exp}|diffusion-{args.algo}|T-{args.T}|"
     if args.lr_decay: file_name += '|lr_decay'
     file_name += f'|ms-{args.ms}'
 
@@ -425,6 +419,7 @@ if __name__ == "__main__":
     variant.update(max_action=max_action)
     setup_logger(os.path.basename(results_dir), variant=variant, log_dir=results_dir)
     wandb.init(project="FL_diffusion", entity="aohuidai", mode="online", name=file_name, config=variant)
+    # wandb.init(project="FL_diffusion", entity="aohuidai", mode="disabled", name=file_name, config=variant)
     utils.print_banner(f"Env: {args.env_name}, state_dim: {state_dim}, action_dim: {action_dim}")
 
     train_agent(env,
