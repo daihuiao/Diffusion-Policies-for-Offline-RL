@@ -147,8 +147,8 @@ class Diffusion_QL_res(object):
                 target_q2 = target_q2.view(batch_size, 10).max(dim=1, keepdim=True)[0]
                 target_q = torch.min(target_q1, target_q2)
             else:
-                new_action = self.diffusion(state)
-                next_action = self.ema_model(state, new_action)
+                new_action = self.diffusion(next_state)
+                next_action = self.ema_model(next_state, new_action)
                 target_q1, target_q2 = self.critic_target(next_state, next_action)
                 target_q = torch.min(target_q1, target_q2)
 
