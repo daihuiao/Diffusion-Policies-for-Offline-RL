@@ -11,7 +11,7 @@ y_1=np.array(data)[:,6]
 y_2=np.array(data)[:,12]
 
 # 绘制折线图
-plt.plot(x, y_1,color=(242/255, 204/255, 142/255))
+plt.plot(x, y_1,color=(242/255, 204/255, 142/255),label=r"$\mathbf{s}_1$")
 plt.plot(x, y_2,color=(223/255, 122/255, 94/255),label=r"$\mathbf{s}_0$")
 plt.xlabel('X')
 plt.ylabel('Y')

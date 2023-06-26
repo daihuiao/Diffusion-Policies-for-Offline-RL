@@ -5,7 +5,19 @@ import matplotlib.pyplot as plt
 import scienceplots
 
 plt.style.use(['science', 'ieee'])
-
+def plot_all_(x_ys):
+    x_y1, x_y2, x_y3 = x_ys[0], x_ys[1], x_ys[2]
+    x, y = x_y1[0], x_y1[1]
+    plt.scatter(x, y, s=5, color=(130/255, 178/255, 154/255),label=r"$\mathbf{s}_1$")
+    x, y = x_y2[0], x_y2[1]
+    plt.scatter(x, y, s=5, color=(242/255, 204/255, 142/255),label=r"$\mathbf{s}_2$")
+    x, y = x_y3[0], x_y3[1]
+    plt.scatter(x, y, s=5, color=(223/255, 122/255, 94/255),label=r"$\mathbf{s}_0$")
+    plt.axis('equal')
+    plt.legend(frameon=True, loc='upper right', )
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.show()
 # # 定义均值和协方差矩阵
 # mean0 = [0.5, 0]
 # cov0 = [[0.01, 0], [0, 0.01]]
@@ -35,10 +47,7 @@ x_ys_all = []
 
 
 
-# with open("x_y_vae_06-17 22:21.pkl", "rb") as f:
-with open("x_y_MLP_06-17 22:23.pkl", "rb") as f:
-# with open("x_y_diffusion_06-17 22:22.pkl", "rb") as f:
-# with open("x_y_gaussian_tanh_06-17 22:21.pkl", "rb") as f:
+with open("x_y_n_50.pkl", "rb") as f:
     while True:
         try:
             x_y = pickle.load(f)
@@ -46,14 +55,14 @@ with open("x_y_MLP_06-17 22:23.pkl", "rb") as f:
         except:
             haha = True
             break
-haha = True
-x_ys_all.append(x_ys[5])
+# haha = True
+# for i in range(10):
+#     plot_all_(x_ys[i])
+x_ys_all.append(x_ys[4])
 x_ys= []
 
-with open("x_y_vae_06-17 22:21.pkl", "rb") as f:
-# with open("x_y_MLP_06-17 22:23.pkl", "rb") as f:
-# with open("x_y_diffusion_06-17 22:22.pkl", "rb") as f:
-# with open("x_y_gaussian_tanh_06-17 22:21.pkl", "rb") as f:
+with open("x_y_n_5.pkl", "rb") as f:
+
     while True:
         try:
             x_y = pickle.load(f)
@@ -62,38 +71,41 @@ with open("x_y_vae_06-17 22:21.pkl", "rb") as f:
             haha = True
             break
 haha = True
+# for i in range(10):
+#     plot_all_(x_ys[i])
+x_ys_all.append(x_ys[-2])
+x_ys= []
+
+with open("x_y_mlp.pkl", "rb") as f:
+    while True:
+        try:
+            x_y = pickle.load(f)
+            x_ys.append(x_y)
+        except:
+            haha = True
+            break
+haha = True
+# for i in range(10):
+#     plot_all_(x_ys[i])
 x_ys_all.append(x_ys[9])
 x_ys= []
 
-# with open("x_y_vae_06-17 22:21.pkl", "rb") as f:
-# with open("x_y_MLP_06-17 22:23.pkl", "rb") as f:
+# # with open("x_y_vae_06-17 22:21.pkl", "rb") as f:
+# # with open("x_y_MLP_06-17 22:23.pkl", "rb") as f:
 # with open("x_y_diffusion_06-17 22:22.pkl", "rb") as f:
-with open("x_y_gaussian_tanh_06-17 22:21.pkl", "rb") as f:
-    while True:
-        try:
-            x_y = pickle.load(f)
-            x_ys.append(x_y)
-        except:
-            haha = True
-            break
-haha = True
-x_ys_all.append(x_ys[8])
-x_ys= []
+# # with open("x_y_gaussian_tanh_06-17 22:21.pkl", "rb") as f:
+#     while True:
+#         try:
+#             x_y = pickle.load(f)
+#             x_ys.append(x_y)
+#         except:
+#             haha = True
+#             break
+# haha = True
+# x_ys_all.append(x_ys[6])
+# x_ys= []
 
-# with open("x_y_vae_06-17 22:21.pkl", "rb") as f:
-# with open("x_y_MLP_06-17 22:23.pkl", "rb") as f:
-with open("x_y_diffusion_06-17 22:22.pkl", "rb") as f:
-# with open("x_y_gaussian_tanh_06-17 22:21.pkl", "rb") as f:
-    while True:
-        try:
-            x_y = pickle.load(f)
-            x_ys.append(x_y)
-        except:
-            haha = True
-            break
-haha = True
-x_ys_all.append(x_ys[6])
-x_ys= []
+
 def plot(x_ys):
     x_y1, x_y2, x_y3 = x_ys[0], x_ys[1], x_ys[2]
     x, y = x_y1[0], x_y1[1]
@@ -107,19 +119,18 @@ def plot(x_ys):
     plt.xlabel("x")
     plt.ylabel("y")
 
-
 def plot_all(x_ys,axs,i,j):
     x_y1, x_y2, x_y3 = x_ys[0], x_ys[1], x_ys[2]
     x, y = x_y1[0], x_y1[1]
-    axs[i,j].scatter(x, y, s=5, color=(130/255, 178/255, 154/255),label=r"$\mathbf{s}_1$")
+    axs[i].scatter(x, y, s=5, color=(130/255, 178/255, 154/255),label=r"$\mathbf{s}_1$")
     x, y = x_y2[0], x_y2[1]
-    axs[i, j].scatter(x, y, s=5, color=(242/255, 204/255, 142/255),label=r"$\mathbf{s}_2$")
+    axs[i].scatter(x, y, s=5, color=(242/255, 204/255, 142/255),label=r"$\mathbf{s}_2$")
     x, y = x_y3[0], x_y3[1]
-    axs[i, j].scatter(x, y, s=5, color=(223/255, 122/255, 94/255),label=r"$\mathbf{s}_0$")
-    axs[i, j].axis('equal')
-    axs[i, j].legend(frameon=True, loc='upper right', )
-    axs[i, j].set_xlabel("x")
-    axs[i, j].set_ylabel("y")
+    axs[i].scatter(x, y, s=5, color=(223/255, 122/255, 94/255),label=r"$\mathbf{s}_0$")
+    axs[i].axis('equal')
+    axs[i].legend(frameon=True, loc='upper right', )
+    axs[i].set_xlabel("x")
+    axs[i].set_ylabel("y")
     # axs[i, j].set_title('Sin(x)')
     # axs[i, j].show()
 
@@ -127,32 +138,30 @@ def plot_all(x_ys,axs,i,j):
 
 # for i in range(10):
 #     plot_all(x_ys[i])
-# fig, axs = plt.subplots(2, 2, figsize=(8, 6))
-
+# fig, axs = plt.subplots(1, 3, figsize=(12, 3))
+#
 # plot_all(x_ys_all[0], axs, 0, 0)
-# axs[0,0].set_title('MLP')
-# plot_all(x_ys_all[1], axs, 0, 1)
-# axs[0,1].set_title('VAE')
-# plot_all(x_ys_all[2], axs, 1, 0)
-# axs[1,0].set_title('gaussian')
-# plot_all(x_ys_all[3], axs, 1, 1)
-# axs[1,1].set_title('diffusion')
-
-# 设置子图间的距离和整体标题
+# axs[0].set_title('16 layers residual network + 50 denoising steps')
+# plot_all(x_ys_all[1], axs, 1, 1)
+# axs[1].set_title('16 layers residual network + 5 denoising steps')
+# plot_all(x_ys_all[2], axs, 2, 0)
+# axs[2].set_title('4 layers MLP + 50 denoising steps')
+# # plot_all(x_ys_all[3], axs, 1, 1)
+# # axs[1,1].set_title('diffusion')
+#
+# # 设置子图间的距离和整体标题
 # plt.subplots_adjust(wspace=0.3, hspace=0.3, top=0.9)
-# plt.suptitle('comparison of distribution reconstruction effect of four models')
+# # plt.suptitle('comparison of distribution reconstruction effect of four models')
+#
+# # 显示图形
+# plt.savefig("multimodal reconstruction.png",dpi=300, bbox_inches='tight')
+# plt.show()
 plot(x_ys_all[0])
-plt.savefig('MLP.png', dpi=300)
+plt.savefig('image5_1.png', dpi=300)
 plt.clf()
 plot(x_ys_all[1])
-plt.savefig('VAE.png', dpi=300)
+plt.savefig('image5_2.png', dpi=300)
 plt.clf()
 plot(x_ys_all[2])
-plt.savefig('gaussian.png', dpi=300)
+plt.savefig('image5_3.png', dpi=300)
 plt.clf()
-plot(x_ys_all[3])
-plt.savefig('diffusion.png', dpi=300)
-plt.clf()
-
-# 显示图形
-# plt.show()
