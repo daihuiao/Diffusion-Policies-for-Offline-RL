@@ -179,7 +179,7 @@ class Diffusion_QL_vae_res(object):
         self.ema.update_model_average(self.ema_model, self.actor)
 
     def train(self, replay_buffer, iterations, batch_size=100, log_writer=None, id=0):
-
+        replay_buffer.to_device()
         metric = {'bc_loss': [], 'ql_loss': [], 'actor_loss': [], 'critic_loss': []}
         for _ in trange(iterations):
             # Sample replay buffer / batch

@@ -108,6 +108,7 @@ class Diffusion_QL_bc(object):
 
     def train(self, replay_buffer, iterations, batch_size=100, log_writer=None, id=0):
 
+        replay_buffer.to_device()
         metric = {'bc_loss': [], 'ql_loss': [], 'actor_loss': [], 'critic_loss': []}
         for _ in trange(iterations):
             # Sample replay buffer / batch

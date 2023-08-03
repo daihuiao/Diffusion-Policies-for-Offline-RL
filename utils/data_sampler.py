@@ -35,16 +35,33 @@ class Data_Sampler(object):
 		self.reward = reward
 
 	def sample(self, batch_size):
-		ind = torch.randint(0, self.size, size=(batch_size,))
+		ind = torch.randint(0, self.size, size=(batch_size,),device=self.device)
 
 		return (
-			self.state[ind].to(self.device),
-			self.action[ind].to(self.device),
-			self.next_state[ind].to(self.device),
-			self.reward[ind].to(self.device),
-			self.not_done[ind].to(self.device)
+			# self.state[ind].to(self.device),
+			# self.action[ind].to(self.device),
+			# self.next_state[ind].to(self.device),
+			# self.reward[ind].to(self.device),
+			# self.not_done[ind].to(self.device)
+			self.state[ind],
+			self.action[ind],
+			self.next_state[ind],
+			self.reward[ind],
+			self.not_done[ind]
 		)
-
+	def to_device(self):
+		self.state = self.state.to(self.device)
+		self.action = self.action.to(self.device)
+		self.next_state = self.next_state.to(self.device)
+		self.reward = self.reward.to(self.device)
+		self.not_done = self.not_done.to(self.device)
+		return  self
+	def left_device(self):
+		self.state = self.state.cpu()
+		self.action = self.action.cpu()
+		self.next_state = self.next_state.cpu()
+		self.reward = self.reward.cpu()
+		self.not_done = self.not_done.cpu()
 
 def iql_normalize(reward, not_done):
 	trajs_rt = []
