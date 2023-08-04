@@ -422,7 +422,7 @@ if __name__ == "__main__":
     variant.update(action_dim=action_dim)
     variant.update(max_action=max_action)
     setup_logger(os.path.basename(results_dir), variant=variant, log_dir=results_dir)
-    wandb.init(project="FDQL_BCQ", entity="aohuidai", mode="online", name=file_name, config=variant)
+    wandb.init(project="FDQL_BCQ", entity="aohuidai", mode="online",group=f"{args.env_name}", name=file_name, config=variant)
     # wandb.init(project="FL_diffusion", entity="aohuidai", mode="disabled", name=file_name, config=variant)
     utils.print_banner(f"Env: {args.env_name}, state_dim: {state_dim}, action_dim: {action_dim}")
 
