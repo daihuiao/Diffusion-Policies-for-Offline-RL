@@ -8,7 +8,7 @@ do
   do
       for my_agent in 10 #env_name
       do
-        python main_2_FL_vae_res.py --num_agents $my_agent --seed $my_seed --env_name $env_name --device 0
+        python main_2_FL_vae_res.py --num_agents $my_agent --seed $my_seed --env_name $env_name --device 1
       done
   done
 done
