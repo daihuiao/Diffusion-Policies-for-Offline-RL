@@ -161,7 +161,7 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
 
     evaluations = []
     training_iters = 0
-    max_timesteps = args.num_epochs * args.num_steps_per_epoch
+    max_timesteps = 0.2e6
     metric = 100.
     utils.print_banner(f"Training Start", separator="*", num_star=90)
 
@@ -290,7 +290,7 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
         metric = bc_loss
 
         if args.save_best_model:
-            agent.save_model(output_dir, curr_epoch)
+            agents[0].save_model(output_dir, curr_epoch)
 
     # Model Selection: online or offline
     scores = np.array(evaluations)
@@ -429,7 +429,7 @@ if __name__ == "__main__":
     variant.update(action_dim=action_dim)
     variant.update(max_action=max_action)
     setup_logger(os.path.basename(results_dir), variant=variant, log_dir=results_dir)
-    wandb.init(project="FDQL", entity="aohuidai", mode="online",group=f"{args.env_name}", name=file_name, config=variant)
+    wandb.init(project="FDQL_to_online", entity="aohuidai", mode="online",group=f"{args.env_name}", name=file_name, config=variant)
     utils.print_banner(f"Env: {args.env_name}, state_dim: {state_dim}, action_dim: {action_dim}")
 
     train_agent(env,
