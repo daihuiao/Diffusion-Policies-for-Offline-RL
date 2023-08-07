@@ -2,9 +2,9 @@
 #
 #agent1,3，10（选做）
 
-for my_seed in  1  #seed
+for my_seed in 0 2 3 #1  #seed
 do
-  for env_name in  "halfcheetah-medium-replay-v2" "halfcheetah-medium-expert-v2"  "halfcheetah-medium-v2"# "halfcheetah-expert-v2"
+  for env_name in  "halfcheetah-medium-replay-v2" #"halfcheetah-medium-expert-v2"  "halfcheetah-medium-v2"# "halfcheetah-expert-v2"
   do
       for my_agent in 1 3 5 #env_name
       do
