@@ -193,7 +193,7 @@ def dataset_info(dataset):
 
 def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args):
     # Load buffer
-    # dataset = d4rl.qlearning_dataset(env)
+    dataset = d4rl.qlearning_dataset(env)
     # data_sampler = Data_Sampler(dataset, device, args.reward_tune)
     utils.print_banner('Loaded buffer')
     replay_buffer = ReplayBuffer(
@@ -202,6 +202,7 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
         int(2e6),
         device,
     )
+    replay_buffer.load_d4rl_dataset(dataset)
 
     if args.algo == 'ql':
         from agents.ql_diffusion_res_online import Diffusion_QL_res_online as Agent
@@ -267,7 +268,8 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
             if done:
                 state, done = train_env.reset(), False
         # if train_only_actor:
-        if True:
+        if False:
+        # if True:
             loss_metric = agent.train_only_actor(replay_buffer,
                                       iterations=iterations,
                                       batch_size=args.batch_size,
@@ -281,34 +283,36 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
         curr_epoch = int(training_iters // int(args.num_steps_per_epoch))
 
         # Logging
-        utils.print_banner(f"Train step: {training_iters}", separator="*", num_star=90)
-        logger.record_tabular('Trained Epochs', curr_epoch)
+        # logger.record_tabular('Trained Epochs', curr_epoch)
         logger.record_tabular('BC Loss', np.mean(loss_metric['bc_loss']))
         logger.record_tabular('QL Loss', np.mean(loss_metric['ql_loss']))
         logger.record_tabular('Actor Loss', np.mean(loss_metric['actor_loss']))
         logger.record_tabular('Critic Loss', np.mean(loss_metric['critic_loss']))
         logger.dump_tabular()
+        utils.print_banner(f"Train step: {training_iters}", separator="*", num_star=90)
+        if training_iters % 10000 == 0:
+            # Evaluation
+            eval_res, eval_res_std, eval_norm_res, eval_norm_res_std = eval_policy(agent, args.env_name, args.seed,
+                                                                                   eval_episodes=args.eval_episodes)
+            evaluations.append([eval_res, eval_res_std, eval_norm_res, eval_norm_res_std,
+                                np.mean(loss_metric['bc_loss']), np.mean(loss_metric['ql_loss']),
+                                np.mean(loss_metric['actor_loss']), np.mean(loss_metric['critic_loss']),
+                                curr_epoch])
+            np.save(os.path.join(output_dir, "eval"), evaluations)
+            logger.record_tabular('Average Episodic Reward', eval_res)
+            logger.record_tabular('Average Episodic N-Reward', eval_norm_res)
+            logger.dump_tabular()
+            wandb.log({"outereval/Average Episodic Reward": eval_res,
+                       "outereval/Average Episodic N-Reward": eval_norm_res,
+                       "outereval/Training_iters": training_iters})
+            bc_loss = np.mean(loss_metric['bc_loss'])
+            if args.early_stop:
+                early_stop = stop_check(metric, bc_loss)
 
-        # Evaluation
-        eval_res, eval_res_std, eval_norm_res, eval_norm_res_std = eval_policy(agent, args.env_name, args.seed,
-                                                                               eval_episodes=args.eval_episodes)
-        evaluations.append([eval_res, eval_res_std, eval_norm_res, eval_norm_res_std,
-                            np.mean(loss_metric['bc_loss']), np.mean(loss_metric['ql_loss']),
-                            np.mean(loss_metric['actor_loss']), np.mean(loss_metric['critic_loss']),
-                            curr_epoch])
-        np.save(os.path.join(output_dir, "eval"), evaluations)
-        logger.record_tabular('Average Episodic Reward', eval_res)
-        logger.record_tabular('Average Episodic N-Reward', eval_norm_res)
-        logger.dump_tabular()
+            metric = bc_loss
 
-        bc_loss = np.mean(loss_metric['bc_loss'])
-        if args.early_stop:
-            early_stop = stop_check(metric, bc_loss)
-
-        metric = bc_loss
-
-        if args.save_best_model:
-            agent.save_model(output_dir, curr_epoch)
+            if args.save_best_model:
+                agent.save_model(output_dir, curr_epoch)
 
     # Model Selection: online or offline
     scores = np.array(evaluations)
@@ -380,7 +384,7 @@ if __name__ == "__main__":
     parser.add_argument("--exp", default='exp_4', type=str)  # Experiment ID
     parser.add_argument('--device', default=1, type=int)  # device, {"cpu", "cuda", "cuda:0", "cuda:1"}, etc
     parser.add_argument("--env_name", default="halfcheetah-medium-expert-v2", type=str)  # OpenAI gym environment name
-    parser.add_argument("--model_dir", default="results/FL_res_fixed|agent-10|T-5||ms-offline|k-0|0|half", type=str)  # OpenAI gym environment name
+    parser.add_argument("--model_dir", default="results/FL_res_fixed_2online|halfcheetah-medium-replay-v2|agent-10|T-5||ms-offline|k-0|0", type=str)  # OpenAI gym environment name
     # parser.add_argument("--env_name", default="walker2d-random-v2", type=str)  # OpenAI gym environment name
     parser.add_argument("--dir", default="results", type=str)  # Logging directory
     parser.add_argument("--seed", default=0, type=int)  # Sets Gym, PyTorch and Numpy seeds
@@ -458,8 +462,8 @@ if __name__ == "__main__":
     variant.update(action_dim=action_dim)
     variant.update(max_action=max_action)
     setup_logger(os.path.basename(results_dir), variant=variant, log_dir=results_dir)
-    # wandb.init(project="FDQL_to_online_", entity="aohuidai", mode="online",group=f"{args.env_name}", name=file_name, config=variant)
-    wandb.init(project="FDQL_to_online_", entity="aohuidai", mode="disabled",group=f"{args.env_name}", name=file_name, config=variant)
+    wandb.init(project="FDQL_to_online_", entity="aohuidai", mode="online",group=f"{args.env_name}", name=file_name, config=variant)
+    # wandb.init(project="FDQL_to_online_", entity="aohuidai", mode="disabled",group=f"{args.env_name}", name=file_name, config=variant)
     utils.print_banner(f"Env: {args.env_name}, state_dim: {state_dim}, action_dim: {action_dim}")
 
     train_agent(env,

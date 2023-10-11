@@ -399,7 +399,7 @@ if __name__ == "__main__":
     args.top_k = hyperparameters[args.env_name]['top_k']
 
     # Setup Logging
-    file_name = f"FL_res_fixed|agent-{args.num_agents}|T-{args.T}|"
+    file_name = f"FL_res_fixed_2online|{args.env_name}|agent-{args.num_agents}|T-{args.T}|"
     if args.lr_decay: file_name += '|lr_decay'
     file_name += f'|ms-{args.ms}'
 
@@ -429,7 +429,7 @@ if __name__ == "__main__":
     variant.update(action_dim=action_dim)
     variant.update(max_action=max_action)
     setup_logger(os.path.basename(results_dir), variant=variant, log_dir=results_dir)
-    wandb.init(project="FDQL_to_online", entity="aohuidai", mode="online",group=f"{args.env_name}", name=file_name, config=variant)
+    wandb.init(project="FDQL_10", entity="aohuidai", mode="online",group=f"{args.env_name}", name=file_name, config=variant)
     utils.print_banner(f"Env: {args.env_name}, state_dim: {state_dim}, action_dim: {action_dim}")
 
     train_agent(env,

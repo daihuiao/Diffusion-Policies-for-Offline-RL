@@ -13,7 +13,7 @@
 #  done
 #done
 
-for seed in 0    #seed
+for seed in 2    #seed
 do
   for env_name in "kitchen-partial-v0"  "pen-cloned-v1"  "antmaze-medium-diverse-v0" #"halfcheetah-medium-replay-v2"  "hopper-medium-replay-v2" "walker2d-medium-replay-v2" # "halfcheetah-medium-expert-v2"  "halfcheetah-medium-v2" # "halfcheetah-expert-v2" #env_name
   do
