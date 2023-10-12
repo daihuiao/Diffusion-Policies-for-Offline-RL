@@ -160,7 +160,7 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
 
     evaluations = []
     training_iters = 0
-    max_timesteps = args.num_epochs * args.num_steps_per_epoch
+    max_timesteps = 0.05e6
     metric = 100.
     utils.print_banner(f"Training Start", separator="*", num_star=90)
 
@@ -170,6 +170,12 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
         global_parameters_actor_model[key] = parameter.clone()
     for i in range(args.num_agents-1):
         agents[i+1].actor.model.load_state_dict(global_parameters_actor_model)
+
+    global_parameters_vae_model = {}
+    for key, parameter in agents[0].vae.model.state_dict().items():
+        global_parameters_vae_model[key] = parameter.clone()
+    for i in range(args.num_agents-1):
+        agents[i+1].vae.model.load_state_dict(global_parameters_vae_model)
 
     global_parameters_critic_q1model = {}
     for key, parameter in agents[0].critic.q1_model.state_dict().items():
@@ -200,7 +206,7 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
         agents[i+1].ema_model.model.load_state_dict(global_parameters_emamodel_model)
 
     while (training_iters < max_timesteps) and (not early_stop):
-        iterations = int(args.eval_freq * args.num_steps_per_epoch)
+        iterations = 10000
         loss_metrics = {}
         for i in range(args.num_agents):
             loss_metric = agents[i].train(data_samplers[i],
@@ -215,8 +221,8 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
         # agents[node_id].critic_target.q1_model
         # agents[node_id].critic_target.q2_model
         # agents[node_id].ema_model.model
-        network_second_name= ["actor","critic","critic","critic_target","critic_target","ema_model"]
-        network_third_name= ["model","q1_model","q2_model","q1_model","q2_model","model"]
+        network_second_name= ["actor","critic","critic","critic_target","critic_target","ema_model","vae"]
+        network_third_name= ["model","q1_model","q2_model","q1_model","q2_model","model","model"]
         #计算所有参数的总和
         sum_parameters = []
         for node_id in range(len(agents)):  # FL 的不同节点
@@ -283,7 +289,7 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
         metric = bc_loss
 
         if args.save_best_model:
-            agent.save_model(output_dir, curr_epoch)
+            agent[0].save_model(output_dir, curr_epoch)
 
     # Model Selection: online or offline
     scores = np.array(evaluations)

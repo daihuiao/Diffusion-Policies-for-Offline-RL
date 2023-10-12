@@ -161,7 +161,7 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
 
     evaluations = []
     training_iters = 0
-    max_timesteps = 0.2e6
+    max_timesteps = 0.05e6
     metric = 100.
     utils.print_banner(f"Training Start", separator="*", num_star=90)
 
@@ -207,7 +207,7 @@ def train_agent(env, state_dim, action_dim, max_action, device, output_dir, args
         agents[i+1].ema_model.model.load_state_dict(global_parameters_emamodel_model)
 
     while (training_iters < max_timesteps) and (not early_stop):
-        iterations = int(args.eval_freq * args.num_steps_per_epoch)
+        iterations = 10000
         loss_metrics = {}
         for i in range(args.num_agents):
             loss_metric = agents[i].train(data_samplers[i],
