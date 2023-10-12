@@ -21,6 +21,13 @@ import wandb
 # 将此处的your_api_key替换为您的实际API密钥
 os.environ["WANDB_API_KEY"] = "b4fdd4e5e894cba0eda9610de6f9f04b87a86453"
 hyperparameters = {
+    'halfcheetah-expert-v2': {'lr': 3e-4, 'eta': 1.0, 'max_q_backup': False, 'reward_tune': 'no',
+                              'eval_freq': 50, 'num_epochs': 2000, 'gn': 7.0, 'top_k': 0},
+    'hopper-expert-v2': {'lr': 3e-4, 'eta': 1.0, 'max_q_backup': False, 'reward_tune': 'no', 'eval_freq': 50,
+                         'num_epochs': 2000, 'gn': 5.0, 'top_k': 2},
+    'walker2d-expert-v2': {'lr': 3e-4, 'eta': 1.0, 'max_q_backup': False, 'reward_tune': 'no', 'eval_freq': 50,
+                           'num_epochs': 2000, 'gn': 5.0, 'top_k': 1},
+
     'walker2d-random-v2': {'lr': 3e-4, 'eta': 1.0, 'max_q_backup': False, 'reward_tune': 'no', 'eval_freq': 50,
                            'num_epochs': 2000, 'gn': 1.0, 'top_k': 1},
     'halfcheetah-medium-v2': {'lr': 3e-4, 'eta': 1.0, 'max_q_backup': False, 'reward_tune': 'no', 'eval_freq': 50,
